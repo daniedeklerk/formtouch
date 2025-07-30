@@ -12,7 +12,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [images, setImages] = useState<HTMLImageElement[]>([]);
   const [scale, setScale] = useState(0.7); // Start with 70% scale for better initial view
-  const [initialScaleSet, setInitialScaleSet] = useState(false); // Track if initial 70% scale has been applied
+  const [userHasZoomed, setUserHasZoomed] = useState(false); // Track if user has manually zoomed
   const { forms, updateForm, addFormField } = useFormStore();
   const form = forms.find((f) => f.id.toString() === formId);
   const [selectedField, setSelectedField] = useState<number | null>(null);
@@ -43,6 +43,8 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
       // Allow zoom from 10% to 500%
       return Math.min(Math.max(0.1, newScale), 5);
     });
+    // Mark that the user has manually zoomed
+    setUserHasZoomed(true);
   };
 
   // Fit to container function
@@ -61,15 +63,12 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
     // Apply the same logic for both portrait and landscape to ensure consistency
     let fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
     
-    // Only override the initial scale if we haven't set it yet
-    if (!initialScaleSet) {
-      setScale(fitScale); // Set to calculated fit scale initially
-      setInitialScaleSet(true);
-    } else {
-      setScale(fitScale);
+    // Only override the scale if the user hasn't manually zoomed yet
+    if (!userHasZoomed) {
+      setScale(0.7); // Always start at 70% zoom
     }
     
-    console.log(`CanvasEditor: Fit to container - Container: ${containerWidth}x${containerHeight}, A4 (${pageOrientation}): ${currentA4Dimensions.width}x${currentA4Dimensions.height}, Scale: ${fitScale.toFixed(2)}`);
+    console.log(`CanvasEditor: Fit to container - Container: ${containerWidth}x${containerHeight}, A4 (${pageOrientation}): ${currentA4Dimensions.width}x${currentA4Dimensions.height}, Scale: ${scale.toFixed(2)}`);
   };
 
   // Setup resize observer
@@ -274,10 +273,13 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
             +
           </button>
           <button
-            onClick={fitToContainer}
+            onClick={() => {
+              setScale(0.7); // Reset to 70% zoom
+              setUserHasZoomed(false); // Reset user zoom flag
+            }}
             className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
           >
-            Fit
+            Reset to 70%
           </button>
         </div>
       </div>
@@ -288,7 +290,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
           height: '100%',
           minHeight: '400px',
           maxHeight: 'calc(100vh - 180px)', // Limit height to prevent excessive scrolling
-          overflow: 'hidden', // Prevent scrolling on the container
+          overflow: 'auto', // Allow scrolling when zoomed in
           padding: '10px',
           display: 'flex',
           justifyContent: 'center',
@@ -307,9 +309,10 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
             display: 'block',
             margin: '0 auto',
             maxWidth: '100%', // Ensure stage doesn't exceed container width
-            overflow: 'hidden', // Prevent overflow
+            overflow: 'visible', // Allow overflow for zooming
             width: '100%', // Make stage responsive to container width
-            height: 'auto' // Maintain aspect ratio
+            height: 'auto', // Maintain aspect ratio
+            transition: 'transform 0.1s ease-out' // Smooth zoom transition
           }}
         >
           <Layer>

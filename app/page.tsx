@@ -50,14 +50,15 @@ export default function Home() {
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-6 w-full">
-        {mode === 'admin' && (
-          <div className="mb-6">
-            <PDFUploader />
+        {/* Two columns at the top */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Left column - PDFUploader */}
+          <div className="bg-white p-4 rounded shadow">
+            {mode === 'admin' && <PDFUploader />}
           </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
-          <div className="bg-white p-4 rounded shadow h-fit lg:h-[calc(100vh-200px)] overflow-y-auto">
+          
+          {/* Right column - Forms list */}
+          <div className="bg-white p-4 rounded shadow h-fit max-h-[400px] overflow-y-auto">
             <div className="space-y-4">
               <div>
                 <input
@@ -93,22 +94,23 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white p-4 rounded shadow flex flex-col h-[calc(100vh-200px)]">
-            {selectedFormId && forms.find((f) => f.id.toString() === selectedFormId) ? (
-              <div className="flex-grow">
-                <CanvasEditor formId={selectedFormId} />
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                {forms.length > 0
-                  ? 'Select a form to edit'
-                  : mode === 'admin' 
-                    ? 'Select a folder to watch for PDFs'
-                    : 'No forms available'}
-              </div>
-            )}
-          </div>
+        {/* Canvas and stage in full width below */}
+        <div className="bg-white p-4 rounded shadow flex flex-col h-[calc(100vh-300px)]">
+          {selectedFormId && forms.find((f) => f.id.toString() === selectedFormId) ? (
+            <div className="flex-grow">
+              <CanvasEditor formId={selectedFormId} />
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              {forms.length > 0
+                ? 'Select a form to edit'
+                : mode === 'admin'
+                  ? 'Select a folder to watch for PDFs'
+                  : 'No forms available'}
+            </div>
+          )}
         </div>
       </main>
     </div>

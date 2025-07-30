@@ -51,15 +51,19 @@ interface FormStore {
   updateForm: (formId: number, updates: Partial<Form>) => Promise<void>;
   addFormField: (formId: number, field: Omit<FormField, 'id'> & { form_id: number }) => Promise<void>;
   cleanup: () => Promise<void>;
+  pdfList: Array<{ name: string; size: number; lastModified: number; path: string }> | null;
+  setPdfList: (pdfs: Array<{ name: string; size: number; lastModified: number; path: string }>) => void;
 }
 
 export const useFormStore = create<FormStore>((set, get) => ({
   mode: 'admin',
   forms: [],
   selectedFolder: null,
+  pdfList: null,
   searchQuery: '',
 
   setMode: (mode) => set({ mode }),
+  setPdfList: (pdfs) => set({ pdfList: pdfs }),
 
   setSelectedFolder: async (path) => {
     // Clean up existing watcher if any
