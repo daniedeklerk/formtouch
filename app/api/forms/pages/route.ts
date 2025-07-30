@@ -11,7 +11,14 @@ export async function GET(request: Request) {
 
   try {
     const pages = await db.getFormPages(parseInt(formId));
-    return NextResponse.json({ pages });
+    
+    // Convert Buffer image data to base64 string
+    const pagesWithBase64 = pages.map(page => ({
+      ...page,
+      image_data: page.image_data.toString('base64')
+    }));
+    
+    return NextResponse.json({ pages: pagesWithBase64 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch form pages' }, { status: 500 });
   }

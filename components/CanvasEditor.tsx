@@ -24,20 +24,35 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
   useEffect(() => {
     if (!form) return;
     
+    console.log('CanvasEditor: Loading images for form:', form.id);
+    console.log('CanvasEditor: Pages data:', form.pages);
+    
     const loadImages = async () => {
       const loadedImages = await Promise.all(
-        form.pages.map((pageUrl) => {
-          return new Promise<HTMLImageElement>((resolve) => {
+        form.pages.map((pageUrl, index) => {
+          console.log(`CanvasEditor: Loading page ${index + 1}:`, pageUrl);
+          return new Promise<HTMLImageElement>((resolve, reject) => {
             const img = new window.Image();
             img.src = pageUrl;
-            img.onload = () => resolve(img);
+            img.onload = () => {
+              console.log(`CanvasEditor: Successfully loaded page ${index + 1}`);
+              resolve(img);
+            };
+            img.onerror = (error) => {
+              console.error(`CanvasEditor: Failed to load page ${index + 1}:`, error);
+              console.error(`CanvasEditor: Failed URL:`, pageUrl);
+              reject(error);
+            };
           });
         })
       );
+      console.log('CanvasEditor: All images loaded:', loadedImages.length);
       setImages(loadedImages);
     };
 
-    loadImages();
+    loadImages().catch(error => {
+      console.error('CanvasEditor: Error loading images:', error);
+    });
   }, [form]);
 
   const handleFieldDragEnd = (e: { target: { x: () => number; y: () => number } }, fieldId: number) => {
@@ -58,7 +73,22 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
     updateForm(Number(formId), { fields: updatedFields });
   };
 
-  if (!form || images.length === 0) return null;
+  if (!form) {
+    console.log('CanvasEditor: No form provided');
+    return <div className="text-center p-4">No form selected</div>;
+  }
+
+  console.log('CanvasEditor: Rendering form', form.id, 'with', images.length, 'images loaded');
+
+  if (images.length === 0) {
+    return (
+      <div className="text-center p-4">
+        <div>Loading images...</div>
+        <div className="text-sm text-gray-500">Form: {form.name}</div>
+        <div className="text-sm text-gray-500">Pages: {form.pages.length}</div>
+      </div>
+    );
+  }
 
   const currentImage = images[currentPage];
 

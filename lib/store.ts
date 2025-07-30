@@ -78,9 +78,19 @@ export const useFormStore = create<FormStore>((set, get) => ({
             isNew: true
           };
           
-          set((state) => ({
-            forms: [...state.forms, formWithDetails]
-          }));
+          set((state) => {
+            // Check if form already exists by ID
+            const existingIndex = state.forms.findIndex((f) => f.id === form.id);
+            if (existingIndex >= 0) {
+              // Update existing form
+              const updatedForms = [...state.forms];
+              updatedForms[existingIndex] = formWithDetails;
+              return { forms: updatedForms };
+            } else {
+              // Add new form
+              return { forms: [...state.forms, formWithDetails] };
+            }
+          });
         } catch (error) {
           console.error('Error processing new form:', error);
         }
