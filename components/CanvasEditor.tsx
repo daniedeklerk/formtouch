@@ -58,17 +58,12 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
     const scaleY = containerHeight / currentA4Dimensions.height;
     
     // Use the smaller scale to ensure the entire image fits without scrolling
-    // For landscape, we want to be more conservative to prevent overflow
+    // Apply the same logic for both portrait and landscape to ensure consistency
     let fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
-    
-    // For landscape orientation, apply additional scaling to ensure responsiveness
-    if (pageOrientation === 'landscape') {
-      fitScale = Math.min(fitScale, 0.7); // Cap landscape at 70% to prevent overflow
-    }
     
     // Only override the initial scale if we haven't set it yet
     if (!initialScaleSet) {
-      setScale(0.7); // Set to 70% initially
+      setScale(fitScale); // Set to calculated fit scale initially
       setInitialScaleSet(true);
     } else {
       setScale(fitScale);
@@ -82,18 +77,33 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
     if (!containerRef.current) return;
     
     // Create resize observer to handle container size changes
-    resizeObserverRef.current = new ResizeObserver(() => {
-      if (images.length > 0) {
-        fitToContainer();
+    resizeObserverRef.current = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        console.log(`CanvasEditor: Container resized to ${width}x${height}`);
+        if (images.length > 0) {
+          fitToContainer();
+        }
       }
     });
     
     resizeObserverRef.current.observe(containerRef.current);
     
+    // Also listen to window resize events as a backup
+    const handleWindowResize = () => {
+      console.log('CanvasEditor: Window resized');
+      if (images.length > 0) {
+        fitToContainer();
+      }
+    };
+    
+    window.addEventListener('resize', handleWindowResize);
+    
     return () => {
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }
+      window.removeEventListener('resize', handleWindowResize);
     };
   }, [images, currentPage]);
 
@@ -228,8 +238,8 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
   const currentImage = images[currentPage];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b">
+    <div className="flex flex-col h-full w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4 sm:px-6 lg:px-8 py-4 bg-white border-b w-full">
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
@@ -273,13 +283,12 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
       </div>
       <div
         ref={containerRef}
-        className="bg-gray-50 rounded-lg shadow-inner flex-1"
+        className="bg-gray-50 rounded-lg shadow-inner flex-1 w-full px-4 sm:px-6 lg:px-8"
         style={{
-          width: '100%',
           height: '100%',
           minHeight: '400px',
           maxHeight: 'calc(100vh - 180px)', // Limit height to prevent excessive scrolling
-          overflow: 'hidden', // Changed to hidden to prevent scrolling
+          overflow: 'hidden', // Prevent scrolling on the container
           padding: '10px',
           display: 'flex',
           justifyContent: 'center',
@@ -298,7 +307,9 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
             display: 'block',
             margin: '0 auto',
             maxWidth: '100%', // Ensure stage doesn't exceed container width
-            overflow: 'hidden' // Hide any overflow content
+            overflow: 'hidden', // Prevent overflow
+            width: '100%', // Make stage responsive to container width
+            height: 'auto' // Maintain aspect ratio
           }}
         >
           <Layer>
