@@ -35,11 +35,12 @@ interface FormStore {
   selectedFolder: string | null;
   searchQuery: string;
   setMode: (mode: 'admin' | 'assessor') => void;
-  setSelectedFolder: (path: string) => Promise<void>;
+  setSelectedFolder: (path: string | null) => Promise<void>;
   loadForms: () => Promise<void>;
   searchForms: (query: string) => Promise<void>;
   updateForm: (formId: number, updates: Partial<Form>) => Promise<void>;
   addFormField: (formId: number, field: Omit<FormField, 'id'> & { form_id: number }) => Promise<void>;
+  cleanup: () => Promise<void>;
 }
 
 export const useFormStore = create<FormStore>((set, get) => ({
@@ -51,10 +52,75 @@ export const useFormStore = create<FormStore>((set, get) => ({
   setMode: (mode) => set({ mode }),
 
   setSelectedFolder: async (path) => {
+    // Clean up existing watcher if any
+    await get().cleanup();
+
+    if (!path) return;
+
     const watcher = FolderWatcher.getInstance();
-    await watcher.startWatching(path);
-    set({ selectedFolder: path });
-    await get().loadForms();
+    
+    // Set up callbacks before starting the watcher
+    watcher.setCallbacks(
+      // Handle new forms
+      async (form: Form) => {
+        try {
+          const { pages } = await fetchApi<{ pages: Array<{ image_data: string }> }>(
+            `/api/forms/pages?formId=${form.id}`
+          );
+          const { fields } = await fetchApi<{ fields: FormField[] }>(
+            `/api/forms/fields?formId=${form.id}`
+          );
+          
+          const formWithDetails = {
+            ...form,
+            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            fields: fields,
+            isNew: true
+          };
+          
+          set((state) => ({
+            forms: [...state.forms, formWithDetails]
+          }));
+        } catch (error) {
+          console.error('Error processing new form:', error);
+        }
+      },
+      // Handle updated forms
+      async (form: Form) => {
+        try {
+          const { pages } = await fetchApi<{ pages: Array<{ image_data: string }> }>(
+            `/api/forms/pages?formId=${form.id}`
+          );
+          const { fields } = await fetchApi<{ fields: FormField[] }>(
+            `/api/forms/fields?formId=${form.id}`
+          );
+          
+          const formWithDetails = {
+            ...form,
+            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            fields: fields,
+            isNew: true
+          };
+          
+          set((state) => ({
+            forms: state.forms.map((f) => 
+              f.id === form.id ? formWithDetails : f
+            )
+          }));
+        } catch (error) {
+          console.error('Error processing updated form:', error);
+        }
+      }
+    );
+
+    try {
+      await watcher.startWatching(path);
+      set({ selectedFolder: path });
+      await get().loadForms();
+    } catch (error) {
+      console.error('Error starting form watcher:', error);
+      set({ selectedFolder: null });
+    }
   },
 
   loadForms: async () => {
@@ -136,5 +202,11 @@ export const useFormStore = create<FormStore>((set, get) => ({
     } catch (error) {
       console.error('Error adding form field:', error);
     }
+  },
+
+  cleanup: async () => {
+    const watcher = FolderWatcher.getInstance();
+    await watcher.stopWatching();
+    set({ selectedFolder: null, forms: [] });
   },
 }));

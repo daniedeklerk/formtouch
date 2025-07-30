@@ -1,14 +1,13 @@
-interface Form {
-  id: number;
-  name: string;
-  folder_path: string;
-  last_modified: Date;
-}
-
-export class FolderWatcher {
-  private ws: WebSocket | null = null;
+// Client-side WebSocket implementation for folder watching
+class FolderWatcher {
   private static instance: FolderWatcher;
-  private folderPath: string | null = null;
+  private callbacks: {
+    onFormAdded: (form: any) => Promise<void>;
+    onFormUpdated: (form: any) => Promise<void>;
+  } | null = null;
+  private isWatching = false;
+  private watchPath: string | null = null;
+  private ws: WebSocket | null = null;
 
   private constructor() {}
 
@@ -19,46 +18,88 @@ export class FolderWatcher {
     return FolderWatcher.instance;
   }
 
-  async startWatching(folderPath: string): Promise<void> {
-    if (this.ws) {
+  setCallbacks(
+    onFormAdded: (form: any) => Promise<void>,
+    onFormUpdated: (form: any) => Promise<void>
+  ) {
+    this.callbacks = { onFormAdded, onFormUpdated };
+  }
+
+  async startWatching(path: string): Promise<void> {
+    if (this.isWatching) {
       await this.stopWatching();
     }
 
-    this.folderPath = folderPath;
-    this.ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001');
+    this.watchPath = path;
+    
+    try {
+      // Connect to WebSocket server
+      const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+      this.ws = new WebSocket(wsUrl);
 
-    this.ws.onopen = () => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({ type: 'watch', folderPath }));
-      }
-    };
+      this.ws.onopen = () => {
+        console.log(`Connected to WebSocket server at ${wsUrl}`);
+        // Send watch message to server
+        this.ws?.send(JSON.stringify({
+          type: 'watch',
+          folderPath: path
+        }));
+        this.isWatching = true;
+        console.log(`Started watching folder: ${path}`);
+      };
 
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'add') {
-          console.log(`Added new form: ${data.form.name}`);
-        } else if (data.type === 'update') {
-          console.log(`Updated form: ${data.form.name}`);
+      this.ws.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'add' && this.callbacks?.onFormAdded) {
+            await this.callbacks.onFormAdded(data.form);
+          } else if (data.type === 'update' && this.callbacks?.onFormUpdated) {
+            await this.callbacks.onFormUpdated(data.form);
+          }
+        } catch (error) {
+          console.error('Error processing WebSocket message:', error);
         }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-      }
-    };
+      };
 
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+      this.ws.onclose = () => {
+        console.log('WebSocket connection closed');
+        this.isWatching = false;
+        this.ws = null;
+      };
+
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        this.isWatching = false;
+      };
+
+    } catch (error) {
+      console.error('Error connecting to WebSocket server:', error);
+      throw error;
+    }
   }
 
   async stopWatching(): Promise<void> {
-    if (this.ws) {
-      if (this.ws.readyState === WebSocket.OPEN && this.folderPath) {
-        this.ws.send(JSON.stringify({ type: 'unwatch', folderPath: this.folderPath }));
+    if (this.ws && this.isWatching) {
+      try {
+        // Send unwatch message before closing
+        if (this.watchPath) {
+          this.ws.send(JSON.stringify({
+            type: 'unwatch',
+            folderPath: this.watchPath
+          }));
+        }
+        
+        this.ws.close();
+        this.ws = null;
+        this.isWatching = false;
+        this.watchPath = null;
+        console.log('Stopped watching folder');
+      } catch (error) {
+        console.error('Error stopping watcher:', error);
       }
-      this.ws.close();
-      this.ws = null;
-      this.folderPath = null;
     }
   }
 }
+
+export { FolderWatcher };
