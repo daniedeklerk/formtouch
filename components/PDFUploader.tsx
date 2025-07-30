@@ -59,7 +59,7 @@ export const PDFUploader = () => {
 
   return (
     <div className="flex flex-col items-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-lg">
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-4 w-full">
         <button
           onClick={handleFolderSelect}
           className="px-4 py-2 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 transition-colors"
@@ -71,17 +71,17 @@ export const PDFUploader = () => {
           OR
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full max-w-2xl">
           <input
             type="text"
             placeholder="Enter full folder path (e.g., C:\\Users\\dmnde\\Documents\\PDFs)"
             value={manualPath}
             onChange={(e) => setManualPath(e.target.value)}
-            className="px-3 py-2 border rounded text-sm w-96"
+            className="px-3 py-2 border rounded text-sm flex-grow"
           />
           <button
             onClick={handleManualPathSubmit}
-            className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-green-600 transition-colors"
+            className="px-4 py-2 bg-green-500 text-white rounded cursor-pointer hover:bg-green-600 transition-colors whitespace-nowrap"
           >
             Watch Path
           </button>
@@ -90,7 +90,7 @@ export const PDFUploader = () => {
       
       {selectedFolder && (
         <div className="text-center">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 break-words">
             Watching folder: {selectedFolder}
           </span>
           <div className="text-xs text-gray-400 mt-1">
@@ -99,7 +99,7 @@ export const PDFUploader = () => {
         </div>
       )}
       
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-gray-500 text-center">
         PDFs in this folder will be automatically added to the template list
       </p>
     </div>

@@ -30,17 +30,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+      <header className="bg-white shadow w-full">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
           <h1 className="text-2xl font-bold text-gray-900">FormTouch</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             {isOffline && (
-              <span className="text-red-500">Offline Mode</span>
+              <span className="text-red-500 text-sm">Offline Mode</span>
             )}
             <select
               value={mode}
               onChange={(e) => setMode(e.target.value as 'admin' | 'assessor')}
-              className="px-3 py-2 border rounded"
+              className="px-3 py-2 border rounded text-sm"
             >
               <option value="admin">Admin Mode</option>
               <option value="assessor">Assessor Mode</option>
@@ -49,21 +49,21 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="px-4 sm:px-6 lg:px-8 py-6 w-full">
         {mode === 'admin' && (
-          <div className="mb-8">
+          <div className="mb-6">
             <PDFUploader />
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
-          <div className="bg-white p-4 rounded shadow">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
+          <div className="bg-white p-4 rounded shadow h-fit lg:h-[calc(100vh-200px)] overflow-y-auto">
             <div className="space-y-4">
               <div>
                 <input
                   type="text"
                   placeholder="Search templates..."
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-3 py-2 border rounded text-sm"
                   onChange={(e) => searchForms(e.target.value)}
                 />
               </div>
@@ -75,15 +75,15 @@ export default function Home() {
                     <button
                       key={form.id}
                       onClick={() => setSelectedFormId(form.id.toString())}
-                      className={`w-full text-left px-4 py-2 rounded flex items-center justify-between ${
+                      className={`w-full text-left px-3 py-2 rounded flex items-center justify-between text-sm ${
                         selectedFormId === form.id.toString()
                           ? 'bg-blue-500 text-white'
                           : 'hover:bg-gray-100'
                       }`}
                     >
-                      <span>{form.name}</span>
+                      <span className="truncate max-w-[70%]">{form.name}</span>
                       {form.isNew && (
-                        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
+                        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded whitespace-nowrap">
                           Updated
                         </span>
                       )}
@@ -94,9 +94,11 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded shadow">
+          <div className="bg-white p-4 rounded shadow flex flex-col h-[calc(100vh-200px)]">
             {selectedFormId && forms.find((f) => f.id.toString() === selectedFormId) ? (
-              <CanvasEditor formId={selectedFormId} />
+              <div className="flex-grow">
+                <CanvasEditor formId={selectedFormId} />
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500">
                 {forms.length > 0

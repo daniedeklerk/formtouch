@@ -215,45 +215,45 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center p-4 bg-white border-b">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
             disabled={currentPage === 0}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+            className="px-3 py-2 bg-blue-500 text-white rounded text-sm disabled:bg-gray-300"
           >
-            Previous Page
+            Previous
           </button>
-          <span className="flex items-center">Page {currentPage + 1} of {images.length}</span>
+          <span className="flex items-center text-sm">Page {currentPage + 1} of {images.length}</span>
           <button
             onClick={() => setCurrentPage((p) => Math.min(images.length - 1, p + 1))}
             disabled={currentPage === images.length - 1}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+            className="px-3 py-2 bg-blue-500 text-white rounded text-sm disabled:bg-gray-300"
           >
-            Next Page
+            Next
           </button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => handleZoom(-0.1)}
             disabled={scale <= 0.1}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 text-sm"
           >
             -
           </button>
-          <span className="min-w-[60px] text-center">{scale > 0 ? Math.round(scale * 100) : 'Fit'}%</span>
+          <span className="min-w-[50px] text-center text-sm">{scale > 0 ? Math.round(scale * 100) : 'Fit'}%</span>
           <button
             onClick={() => handleZoom(0.1)}
             disabled={scale >= 5}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50"
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 text-sm"
           >
             +
           </button>
           <button
             onClick={fitToContainer}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
           >
-            Fit to Screen
+            Fit
           </button>
         </div>
       </div>
@@ -263,10 +263,10 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
         style={{ 
           width: '100%',
           height: '100%',
-          minHeight: '600px',
-          maxHeight: 'calc(100vh - 200px)', // Limit height to prevent excessive scrolling
+          minHeight: '400px',
+          maxHeight: 'calc(100vh - 180px)', // Limit height to prevent excessive scrolling
           overflow: 'auto',
-          padding: '20px',
+          padding: '10px',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'flex-start',
