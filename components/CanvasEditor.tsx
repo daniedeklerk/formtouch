@@ -11,7 +11,8 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [images, setImages] = useState<HTMLImageElement[]>([]);
-  const [scale, setScale] = useState(0); // Start with 0 scale, will be set by fitToContainer
+  const [scale, setScale] = useState(0.7); // Start with 70% scale for better initial view
+  const [initialScaleSet, setInitialScaleSet] = useState(false); // Track if initial 70% scale has been applied
   const { forms, updateForm, addFormField } = useFormStore();
   const form = forms.find((f) => f.id.toString() === formId);
   const [selectedField, setSelectedField] = useState<number | null>(null);
@@ -19,9 +20,9 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
   const [pageOrientation, setPageOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  // A4 dimensions in pixels at 96 DPI for screen-friendly size while maintaining quality
-  const A4_PORTRAIT = { width: 794, height: 1123 }; // 96 DPI (screen standard)
-  const A4_LANDSCAPE = { width: 1123, height: 794 }; // 96 DPI (screen standard)
+  // A4 dimensions in pixels at 150 DPI for better quality
+  const A4_PORTRAIT = { width: 1240, height: 1754 }; // 150 DPI (higher quality)
+  const A4_LANDSCAPE = { width: 1754, height: 1240 }; // 150 DPI (higher quality)
 
   // Function to detect page orientation from image dimensions
   const detectOrientation = (width: number, height: number): 'portrait' | 'landscape' => {
@@ -57,8 +58,21 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
     const scaleY = containerHeight / currentA4Dimensions.height;
     
     // Use the smaller scale to ensure the entire image fits without scrolling
-    const fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
-    setScale(fitScale);
+    // For landscape, we want to be more conservative to prevent overflow
+    let fitScale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 100%
+    
+    // For landscape orientation, apply additional scaling to ensure responsiveness
+    if (pageOrientation === 'landscape') {
+      fitScale = Math.min(fitScale, 0.7); // Cap landscape at 70% to prevent overflow
+    }
+    
+    // Only override the initial scale if we haven't set it yet
+    if (!initialScaleSet) {
+      setScale(0.7); // Set to 70% initially
+      setInitialScaleSet(true);
+    } else {
+      setScale(fitScale);
+    }
     
     console.log(`CanvasEditor: Fit to container - Container: ${containerWidth}x${containerHeight}, A4 (${pageOrientation}): ${currentA4Dimensions.width}x${currentA4Dimensions.height}, Scale: ${fitScale.toFixed(2)}`);
   };
@@ -124,13 +138,13 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
         
         const currentA4Dimensions = detectedOrientation === 'landscape' ? A4_LANDSCAPE : A4_PORTRAIT;
         
-        // Use A4 dimensions at 96 DPI based on detected orientation (screen-friendly)
+        // Use A4 dimensions at 150 DPI based on detected orientation (higher quality)
         setStageDimensions({
           width: currentA4Dimensions.width,
           height: currentA4Dimensions.height
         });
         
-        console.log(`CanvasEditor: Stage dimensions set to A4 ${detectedOrientation}: ${currentA4Dimensions.width}x${currentA4Dimensions.height} pixels (96 DPI - screen friendly)`);
+        console.log(`CanvasEditor: Stage dimensions set to A4 ${detectedOrientation}: ${currentA4Dimensions.width}x${currentA4Dimensions.height} pixels (150 DPI - higher quality)`);
         
         // Auto-fit to container immediately to ensure it fits the viewport
         setTimeout(() => {
@@ -161,13 +175,13 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
       
       const currentA4Dimensions = detectedOrientation === 'landscape' ? A4_LANDSCAPE : A4_PORTRAIT;
       
-      // Use A4 dimensions at 96 DPI based on detected orientation (screen-friendly)
+      // Use A4 dimensions at 150 DPI based on detected orientation (higher quality)
       setStageDimensions({
         width: currentA4Dimensions.width,
         height: currentA4Dimensions.height
       });
       
-      console.log(`CanvasEditor: Stage dimensions updated to A4 ${detectedOrientation}: ${currentA4Dimensions.width}x${currentA4Dimensions.height} pixels (96 DPI - screen friendly)`);
+      console.log(`CanvasEditor: Stage dimensions updated to A4 ${detectedOrientation}: ${currentA4Dimensions.width}x${currentA4Dimensions.height} pixels (150 DPI - higher quality)`);
       
       // Re-fit to container for the new page to ensure it fits the viewport
       setTimeout(() => {
@@ -241,7 +255,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
           >
             -
           </button>
-          <span className="min-w-[50px] text-center text-sm">{scale > 0 ? Math.round(scale * 100) : 'Fit'}%</span>
+          <span className="min-w-[50px] text-center text-sm">{Math.round(scale * 100)}%</span>
           <button
             onClick={() => handleZoom(0.1)}
             disabled={scale >= 5}
@@ -257,15 +271,15 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
           </button>
         </div>
       </div>
-      <div 
+      <div
         ref={containerRef}
         className="bg-gray-50 rounded-lg shadow-inner flex-1"
-        style={{ 
+        style={{
           width: '100%',
           height: '100%',
           minHeight: '400px',
           maxHeight: 'calc(100vh - 180px)', // Limit height to prevent excessive scrolling
-          overflow: 'auto',
+          overflow: 'hidden', // Changed to hidden to prevent scrolling
           padding: '10px',
           display: 'flex',
           justifyContent: 'center',
@@ -278,11 +292,13 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
           ref={stageRef}
           width={stageDimensions.width}
           height={stageDimensions.height}
-          style={{ 
-            transform: scale > 0 ? `scale(${scale})` : 'none',
+          style={{
+            transform: `scale(${scale})`,
             transformOrigin: 'center top',
             display: 'block',
-            margin: '0 auto'
+            margin: '0 auto',
+            maxWidth: '100%', // Ensure stage doesn't exceed container width
+            overflow: 'hidden' // Hide any overflow content
           }}
         >
           <Layer>
