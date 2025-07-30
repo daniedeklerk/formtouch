@@ -1,0 +1,71 @@
+import { NextApiResponse } from 'next';
+import { NextRequest } from 'next/server';
+import { wsManager } from '@/lib/server/websocket';
+
+if (!process.env.NEXT_PUBLIC_WS_URL) {
+  process.env.NEXT_PUBLIC_WS_URL = 'ws://localhost:3001';
+}
+
+// Initialize WebSocket server
+wsManager.initializeServer();
+              awaitWriteFinish: true
+            });
+
+            watcher
+              .on('add', async (filePath: string) => {
+                const name = path.basename(filePath);
+                try {
+                  const form = await db.createForm(name, folderPath);
+                  wsServer.clients.forEach((client) => {
+                    if (client.readyState === 1) {
+                      client.send(JSON.stringify({ type: 'add', form }));
+                    }
+                  });
+                } catch (error) {
+                  console.error(`Error adding form: ${name}`, error);
+                }
+              })
+              .on('change', async (filePath: string) => {
+                const name = path.basename(filePath);
+                try {
+                  const forms = await db.searchForms(name);
+                  if (forms.length > 0) {
+                    const form = await db.updateForm(forms[0].id, {
+                      last_modified: new Date()
+                    });
+                    wsServer.clients.forEach((client) => {
+                      if (client.readyState === 1) {
+                        client.send(JSON.stringify({ type: 'update', form }));
+                      }
+                    });
+                  }
+                } catch (error) {
+                  console.error(`Error updating form: ${name}`, error);
+                }
+              });
+
+            watchers.set(folderPath, watcher);
+          }
+        } else if (data.type === 'unwatch') {
+          const { folderPath } = data;
+          const watcher = watchers.get(folderPath);
+          if (watcher) {
+            await watcher.close();
+            watchers.delete(folderPath);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    });
+
+    ws.on('close', () => {
+      console.log('Client disconnected');
+    });
+  });
+}
+
+export default function handler(req: NextRequest, res: NextApiResponse) {
+  // This is just to keep the API route valid
+  res.status(200).json({ message: 'WebSocket server is running' });
+}

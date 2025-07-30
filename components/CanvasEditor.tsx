@@ -12,9 +12,9 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [images, setImages] = useState<HTMLImageElement[]>([]);
   const [scale, setScale] = useState(0.8);
-  const { forms, updateForm } = useFormStore();
-  const form = forms.find((f) => f.id === formId);
-  const [selectedField, setSelectedField] = useState<string | null>(null);
+  const { forms, updateForm, addFormField } = useFormStore();
+  const form = forms.find((f) => f.id.toString() === formId);
+  const [selectedField, setSelectedField] = useState<number | null>(null);
 
   // Handle zoom in/out
   const handleZoom = (delta: number) => {
@@ -40,14 +40,14 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
     loadImages();
   }, [form]);
 
-  const handleFieldDragEnd = (e: any, fieldId: string) => {
+  const handleFieldDragEnd = (e: { target: { x: () => number; y: () => number } }, fieldId: number) => {
     if (!form) return;
     
     const updatedFields = form.fields.map((field) => {
       if (field.id === fieldId) {
         return {
           ...field,
-          page: currentPage,
+          page_number: currentPage,
           x: e.target.x(),
           y: e.target.y(),
         };
@@ -55,7 +55,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
       return field;
     });
 
-    updateForm(formId, { ...form, fields: updatedFields });
+    updateForm(Number(formId), { fields: updatedFields });
   };
 
   if (!form || images.length === 0) return null;
@@ -127,7 +127,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
               height={842}
             />
             {form.fields
-              .filter((field) => field.page === currentPage)
+              .filter((field) => field.page_number === currentPage)
               .map((field) => (
                 <React.Fragment key={field.id}>
                   <Rect

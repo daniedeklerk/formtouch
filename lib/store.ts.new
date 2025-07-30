@@ -1,12 +1,23 @@
 import { create } from 'zustand';
+import { db } from './db';
 import { FolderWatcher } from './services/FolderWatcher';
 
-async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    throw new Error('API request failed');
-  }
-  return response.json();
+interface FormPage {
+  id: number;
+  form_id: number;
+  page_number: number;
+  image_data: Buffer;
+}
+
+interface FormField {
+  id: number;
+  form_id: number;
+  label: string;
+  page_number: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface Form {
@@ -17,16 +28,6 @@ interface Form {
   pages: string[];
   fields: FormField[];
   isNew?: boolean;
-}
-
-interface FormField {
-  id: number;
-  label: string;
-  page_number: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
 }
 
 interface FormStore {
@@ -50,7 +51,7 @@ export const useFormStore = create<FormStore>((set, get) => ({
 
   setMode: (mode) => set({ mode }),
 
-  setSelectedFolder: async (path) => {
+  setSelectedFolder: async (path: string) => {
     const watcher = FolderWatcher.getInstance();
     await watcher.startWatching(path);
     set({ selectedFolder: path });
@@ -59,21 +60,17 @@ export const useFormStore = create<FormStore>((set, get) => ({
 
   loadForms: async () => {
     try {
-      const { forms } = await fetchApi<{ forms: Form[] }>('/api/forms');
+      const forms = await db.getForms();
       const formsWithDetails = await Promise.all(
         forms.map(async (form: Form) => {
-          const { pages } = await fetchApi<{ pages: Array<{ image_data: string }> }>(
-            `/api/forms/pages?formId=${form.id}`
-          );
-          const { fields } = await fetchApi<{ fields: FormField[] }>(
-            `/api/forms/fields?formId=${form.id}`
-          );
+          const pages = await db.getFormPages(form.id);
+          const fields = await db.getFormFields(form.id);
           
           return {
             ...form,
-            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            pages: pages.map((p: FormPage) => `data:image/png;base64,${p.image_data.toString('base64')}`),
             fields: fields,
-            isNew: new Date().getTime() - new Date(form.last_modified).getTime() < 24 * 60 * 60 * 1000
+            isNew: new Date().getTime() - form.last_modified.getTime() < 24 * 60 * 60 * 1000 // Highlight if updated in last 24h
           };
         })
       );
@@ -87,21 +84,17 @@ export const useFormStore = create<FormStore>((set, get) => ({
   searchForms: async (query: string) => {
     try {
       set({ searchQuery: query });
-      const { forms } = await fetchApi<{ forms: Form[] }>(`/api/forms?query=${encodeURIComponent(query)}`);
+      const forms = await db.searchForms(query);
       const formsWithDetails = await Promise.all(
         forms.map(async (form: Form) => {
-          const { pages } = await fetchApi<{ pages: Array<{ image_data: string }> }>(
-            `/api/forms/pages?formId=${form.id}`
-          );
-          const { fields } = await fetchApi<{ fields: FormField[] }>(
-            `/api/forms/fields?formId=${form.id}`
-          );
+          const pages = await db.getFormPages(form.id);
+          const fields = await db.getFormFields(form.id);
           
           return {
             ...form,
-            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            pages: pages.map((p: FormPage) => `data:image/png;base64,${p.image_data.toString('base64')}`),
             fields: fields,
-            isNew: new Date().getTime() - new Date(form.last_modified).getTime() < 24 * 60 * 60 * 1000
+            isNew: new Date().getTime() - form.last_modified.getTime() < 24 * 60 * 60 * 1000
           };
         })
       );
@@ -114,11 +107,7 @@ export const useFormStore = create<FormStore>((set, get) => ({
 
   updateForm: async (formId: number, updates: Partial<Form>) => {
     try {
-      await fetchApi('/api/forms', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: formId, updates })
-      });
+      await db.updateForm(formId, updates);
       await get().loadForms();
     } catch (error) {
       console.error('Error updating form:', error);
@@ -127,11 +116,7 @@ export const useFormStore = create<FormStore>((set, get) => ({
 
   addFormField: async (formId: number, field: Omit<FormField, 'id'> & { form_id: number }) => {
     try {
-      await fetchApi('/api/forms/fields', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formId, field })
-      });
+      await db.saveFormField(formId, field);
       await get().loadForms();
     } catch (error) {
       console.error('Error adding form field:', error);
