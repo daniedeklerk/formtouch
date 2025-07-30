@@ -15,6 +15,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
   const { forms, updateForm, addFormField } = useFormStore();
   const form = forms.find((f) => f.id.toString() === formId);
   const [selectedField, setSelectedField] = useState<number | null>(null);
+  const [stageDimensions, setStageDimensions] = useState({ width: 595, height: 842 });
 
   // Handle zoom in/out
   const handleZoom = (delta: number) => {
@@ -26,6 +27,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
     
     console.log('CanvasEditor: Loading images for form:', form.id);
     console.log('CanvasEditor: Pages data:', form.pages);
+    console.log('CanvasEditor: Page metadata:', form.pageMetadata);
     
     const loadImages = async () => {
       const loadedImages = await Promise.all(
@@ -36,6 +38,7 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
             img.src = pageUrl;
             img.onload = () => {
               console.log(`CanvasEditor: Successfully loaded page ${index + 1}`);
+              console.log(`CanvasEditor: Image dimensions: ${img.width}x${img.height}`);
               resolve(img);
             };
             img.onerror = (error) => {
@@ -48,6 +51,25 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
       );
       console.log('CanvasEditor: All images loaded:', loadedImages.length);
       setImages(loadedImages);
+      
+      // Update stage dimensions based on the first page's metadata
+      if (form.pageMetadata && form.pageMetadata.length > 0) {
+        const metadata = form.pageMetadata[0];
+        console.log('CanvasEditor: Using metadata for stage dimensions:', metadata);
+        
+        // Use the original dimensions (in points) for the stage
+        // This ensures that field coordinates are consistent with the original PDF
+        setStageDimensions({
+          width: metadata.original_width || 595,
+          height: metadata.original_height || 842
+        });
+        
+        console.log(`CanvasEditor: Stage dimensions set to ${metadata.original_width}x${metadata.original_height} points`);
+      } else {
+        // Fallback to A4 size if no metadata
+        setStageDimensions({ width: 595, height: 842 });
+        console.log('CanvasEditor: No metadata found, using A4 fallback dimensions');
+      }
     };
 
     loadImages().catch(error => {
@@ -143,8 +165,8 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
       >
         <Stage
           ref={stageRef}
-          width={595}
-          height={842}
+          width={stageDimensions.width}
+          height={stageDimensions.height}
           style={{ 
             transform: `scale(${scale})`,
             transformOrigin: 'center top'
@@ -153,8 +175,8 @@ export const CanvasEditor = ({ formId }: CanvasEditorProps) => {
           <Layer>
             <Image
               image={currentImage}
-              width={595}
-              height={842}
+              width={currentImage.width}
+              height={currentImage.height}
             />
             {form.fields
               .filter((field) => field.page_number === currentPage)

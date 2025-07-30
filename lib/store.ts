@@ -15,6 +15,16 @@ interface Form {
   folder_path: string;
   last_modified: Date;
   pages: string[];
+  pageMetadata?: Array<{
+    original_width: number;
+    original_height: number;
+    rendered_width: number;
+    rendered_height: number;
+    paper_size: string;
+    orientation: string;
+    scale: number;
+    dpi: number;
+  }>;
   fields: FormField[];
   isNew?: boolean;
 }
@@ -73,7 +83,8 @@ export const useFormStore = create<FormStore>((set, get) => ({
           
           const formWithDetails = {
             ...form,
-            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            pages: pages.map((p: any) => `data:image/png;base64,${p.image_data}`),
+            pageMetadata: pages.map((p: any) => p.metadata),
             fields: fields,
             isNew: true
           };
@@ -107,7 +118,8 @@ export const useFormStore = create<FormStore>((set, get) => ({
           
           const formWithDetails = {
             ...form,
-            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            pages: pages.map((p: any) => `data:image/png;base64,${p.image_data}`),
+            pageMetadata: pages.map((p: any) => p.metadata),
             fields: fields,
             isNew: true
           };
@@ -147,7 +159,8 @@ export const useFormStore = create<FormStore>((set, get) => ({
           
           return {
             ...form,
-            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            pages: pages.map((p: any) => `data:image/png;base64,${p.image_data}`),
+            pageMetadata: pages.map((p: any) => p.metadata),
             fields: fields,
             isNew: new Date().getTime() - new Date(form.last_modified).getTime() < 24 * 60 * 60 * 1000
           };
@@ -175,7 +188,8 @@ export const useFormStore = create<FormStore>((set, get) => ({
           
           return {
             ...form,
-            pages: pages.map((p: { image_data: string }) => `data:image/png;base64,${p.image_data}`),
+            pages: pages.map((p: any) => `data:image/png;base64,${p.image_data}`),
+            pageMetadata: pages.map((p: any) => p.metadata),
             fields: fields,
             isNew: new Date().getTime() - new Date(form.last_modified).getTime() < 24 * 60 * 60 * 1000
           };

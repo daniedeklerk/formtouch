@@ -23,6 +23,14 @@ export interface FormPage {
   form_id: number;
   page_number: number;
   image_data: Buffer;
+  original_width?: number;
+  original_height?: number;
+  rendered_width?: number;
+  rendered_height?: number;
+  paper_size?: string;
+  orientation?: string;
+  scale?: number;
+  dpi?: number;
   created_at: Date;
 }
 

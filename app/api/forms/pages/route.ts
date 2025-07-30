@@ -12,10 +12,20 @@ export async function GET(request: Request) {
   try {
     const pages = await db.getFormPages(parseInt(formId));
     
-    // Convert Buffer image data to base64 string
+    // Convert Buffer image data to base64 string and include metadata
     const pagesWithBase64 = pages.map(page => ({
       ...page,
-      image_data: page.image_data.toString('base64')
+      image_data: page.image_data.toString('base64'),
+      metadata: {
+        original_width: page.original_width,
+        original_height: page.original_height,
+        rendered_width: page.rendered_width,
+        rendered_height: page.rendered_height,
+        paper_size: page.paper_size,
+        orientation: page.orientation,
+        scale: page.scale,
+        dpi: page.dpi
+      }
     }));
     
     return NextResponse.json({ pages: pagesWithBase64 });
